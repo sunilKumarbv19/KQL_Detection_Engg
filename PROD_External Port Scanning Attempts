@@ -1,0 +1,17 @@
+This rule identifies a possible port scan (vertical scan), in which a single source tries to access a large number of different ports is a short time frame. This may indicate that a [port scanner](https://en.wikipedia.org/wiki/Port_scanner) is trying to identify open ports in order to penetrate a system.
+
+//Use-Case#: External Vertical Scanning Attempts
+//idea based on refer: https://github.com/Azure/Azure-Sentinel/blob/master/Solutions/Network%20Session%20Essentials/Analytic%20Rules/PortScan.yaml
+YourHttpLogTable
+| extend source_count = 0
+| extend destination_port_count = 0
+//Remove any Internal Ips segment or known scanner Ips
+| where src_s !in ("0.0.0.0", "N/A")
+| where not(ipv4_is_match(src_s, "10.0.0.0/8"))
+//Condition
+| where Http-Return-value > "2" // success rate or | where Http-Return-value startswith "2"
+| where src_s matches regex @"^\d{0,9}\.\d{0,9}\.\d{0,9}\.\d{0,9}$" // to exclude IPV6 values
+| where not(destinationIP has_any("80", "8080", "81", "443", "N/A")) //ports Ignored
+| summarize AttemptedPortsCount=dcount(destinationIP), AttemptedPorts=make_set(destinationIP, 100) by src_s, bin(TimeGenerated, 1h)
+| extend portScanThreshold = 30 // Threshold Point of 30 Destination ports
+| where AttemptedPortsCount >= portScanThreshold
