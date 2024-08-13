@@ -1,0 +1,5 @@
+your_HTTP_log_Table
+// for api results
+| where URI-original has_any ( "apikey=", "key=","api_key","key_here", "api/auth.test", "secrets", "secret_key", "refresh_token", "access_token", "grant_token", "id_token", "accesstoken", "grant_type", "oauth2/token")
+| project TimeGenerated, SourceIP, DestinationIP, HttpMethod, HttpRequestURI,HttpRequestBody, HttpResponse, Httpuseragent, destinationport, 
+| order by TimeGenerated desc
