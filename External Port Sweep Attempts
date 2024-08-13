@@ -1,0 +1,15 @@
+This detection rule detects scenarios when a particular port is being scanned by multiple external sources, The rule utilize normalisation, and is applied to any source which supports the ASIM Network Session schema.
+
+//Use-Case#:External Port Sweep Attempts
+YourHttpLogTable
+//Remove any Internal Ips segment or known scanner Ips
+| where src_s !in ("0.0.0.0", "N/A")
+| where not(ipv4_is_match(src_s, "10.0.0.0/8"))
+//condition
+| where Http-Return-value > "2" // success rate or | where Http-Return-value startswith "2"
+| where sourceIP matches regex @"^\d{0,9}\.\d{0,9}\.\d{0,9}\.\d{0,9}$" // to exclude IPV6 values
+| where not(destinationIP has_any("80", "8080", "81", "443", "N/A")) //ports Ignored
+| where TimeGenerated between (ago(1d)..(now()))
+| summarize make_set(HTTP-Host,100) by destinationIP
+| extend threshold >= 5
+| where array_length(set_HTTP_Host) >= threshold
